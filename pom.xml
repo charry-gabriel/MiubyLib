@@ -10,6 +10,14 @@
     <version>1.0</version>
     <packaging>jar</packaging>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub charry-gabriel Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/charry-gabriel/MiubyLib</url>
+        </repository>
+    </distributionManagement>
+
     <repositories>
         <repository>
             <id>papermc</id>
@@ -39,7 +47,7 @@
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.21.4-R0.1-SNAPSHOT</version>
+            <version>1.21.6-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

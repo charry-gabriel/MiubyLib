@@ -1,3 +1,3 @@
-package fr.miuby.world;
+package fr.miuby.lib.world;
 
 public interface WorldType { }

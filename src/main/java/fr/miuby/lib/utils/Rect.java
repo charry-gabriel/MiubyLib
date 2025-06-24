@@ -1,4 +1,4 @@
-package fr.miuby.utils;
+package fr.miuby.lib.utils;
 
 /**
  * The Rect class represents a three-dimensional rectangular boundary defined by

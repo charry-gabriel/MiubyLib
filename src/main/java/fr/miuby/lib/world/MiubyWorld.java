@@ -1,6 +1,6 @@
-package fr.miuby.world;
+package fr.miuby.lib.world;
 
-import fr.miuby.utils.Rect;
+import fr.miuby.lib.utils.Rect;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

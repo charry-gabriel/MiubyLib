@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Getter
 @RequiredArgsConstructor
-public class MiubyWorld {
+public class MLWorld {
     private final World world;
     private final String name;
     private final NamedTextColor color;

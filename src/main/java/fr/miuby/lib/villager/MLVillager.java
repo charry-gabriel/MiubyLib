@@ -40,10 +40,10 @@ public abstract class MLVillager {
             villagerData = createDefaultData();
             createVillager();
             saveData();
+            onInitialized();
         } else {
             findVillager(0);
         }
-        onInitialized();
     }
 
     protected void destroy() {
@@ -59,6 +59,8 @@ public abstract class MLVillager {
     protected void onInitialized() {
         getVillager().customName(getDisplayName());
         createInventory();
+
+        MiubyLib.callEvent(new VillagerLoadedEvent(this));
     }
 
     protected void createInventory() {
@@ -80,6 +82,8 @@ public abstract class MLVillager {
         if (attempt >= 40) {
             MiubyLib.getLogger().warning("Unable to find villager " + nameId + " after waiting for chunk load.");
             createVillager();
+            onInitialized();
+            return;
         }
 
         if (!villagerData.location.getChunk().isLoaded()) {
@@ -90,6 +94,7 @@ public abstract class MLVillager {
         if (entity != null && entity.getType() == EntityType.VILLAGER) {
             this.villager = (Villager)entity;
             MiubyLib.getLogger().info("Villager " + nameId + " found after waiting " + attempt + " ticks.");
+            onInitialized();
         } else {
             MiubyLib.runLater(() -> findVillager(attempt + 1), 1L);
         }

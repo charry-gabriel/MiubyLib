@@ -1,6 +1,7 @@
 package fr.miuby.lib;
 
 import org.bukkit.Bukkit;
+import org.bukkit.event.Event;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.logging.Logger;
@@ -18,5 +19,9 @@ public class MiubyLib {
 
     public static Logger getLogger() {
         return plugin.getLogger();
+    }
+
+    public static void callEvent(Event event) {
+        Bukkit.getPluginManager().callEvent(event);
     }
 }

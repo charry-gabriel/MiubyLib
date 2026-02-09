@@ -13,6 +13,8 @@ public class VillagerRegistry {
     private VillagerRegistry() {}
 
     public static void register(MLVillager villager) {
+        assert villager.getVillager() != null;
+
         villagers.put(villager.getVillager().getUniqueId(), villager);
         byName.put(villager.getNameId(), villager);
     }

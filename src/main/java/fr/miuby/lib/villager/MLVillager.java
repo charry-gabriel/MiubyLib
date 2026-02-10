@@ -68,6 +68,14 @@ public abstract class MLVillager {
     }
 
     private void createVillager() {
+        if (villagerData == null || villagerData.location.getWorld() == null) {
+            throw new IllegalStateException("Unable to create villager " + nameId + ": Missing Location or World in villagerData.");
+        }
+
+        if (!villagerData.location.getChunk().isLoaded()) {
+            villagerData.location.getChunk().load();
+        }
+
         this.villager = (Villager) villagerData.location.getWorld().spawnEntity(villagerData.location, EntityType.VILLAGER);
         villager.setVillagerType(type);
         villager.setProfession(profession);
@@ -79,9 +87,10 @@ public abstract class MLVillager {
     }
 
     private void findVillager(int attempt) {
-        if (attempt >= 40) {
+        if (attempt >= 10) {
             MiubyLib.getLogger().warning("Unable to find villager " + nameId + " after waiting for chunk load.");
             createVillager();
+            saveData();
             onInitialized();
             return;
         }
@@ -96,7 +105,7 @@ public abstract class MLVillager {
             MiubyLib.getLogger().info("Villager " + nameId + " found after waiting " + attempt + " ticks.");
             onInitialized();
         } else {
-            MiubyLib.runLater(() -> findVillager(attempt + 1), 1L);
+            MiubyLib.runLater(() -> findVillager(attempt + 1), 10L);
         }
     }
 }

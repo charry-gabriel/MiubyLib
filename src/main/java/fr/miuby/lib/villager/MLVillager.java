@@ -3,12 +3,14 @@ package fr.miuby.lib.villager;
 import fr.miuby.lib.MiubyLib;
 import lombok.Getter;
 import net.kyori.adventure.text.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.Inventory;
 
 import javax.annotation.Nullable;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 @Getter
@@ -16,11 +18,29 @@ public abstract class MLVillager {
     protected final String nameId;
     private final Villager.Type type;
     private final Villager.Profession profession;
-    protected Villager villager;
+    private Villager villager;
+
     protected TextComponent displayName;
     protected Inventory inventory;
 
     private MLVillagerData villagerData;
+
+    public Villager getVillager() {
+        if (this.villager != null && this.villager.isValid() && !this.villager.isDead())
+            return this.villager;
+
+        UUID uuid = this.villager == null ? null : this.villager.getUniqueId();
+        if (uuid == null)
+            throw new IllegalStateException("Villager " + this.nameId + " is null.");
+
+        Entity lookup = Bukkit.getEntity(uuid);
+        if (lookup instanceof Villager live) {
+            this.villager = live;
+            return live;
+        }
+
+        return villager;
+    }
 
     public static <T extends MLVillager> T create(Supplier<T> constructor) {
         T villager = constructor.get();

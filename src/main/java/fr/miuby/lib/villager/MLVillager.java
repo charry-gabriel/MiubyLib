@@ -82,6 +82,8 @@ public abstract class MLVillager {
         villager.setAI(false);
         villager.setCollidable(false);
         villager.setSilent(true);
+        villager.setPersistent(true);
+        villager.setRemoveWhenFarAway(false);
 
         this.villagerData.uuid = this.villager.getUniqueId();
     }

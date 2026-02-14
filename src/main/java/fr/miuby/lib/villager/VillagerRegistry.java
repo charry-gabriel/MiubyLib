@@ -16,8 +16,17 @@ public class VillagerRegistry {
         if (villager.getVillager() == null)
             throw new IllegalStateException("Unable to register villager " + villager.getNameId() + ": Villager not spawned.");
 
-        villagers.put(villager.getVillager().getUniqueId(), villager);
-        byName.put(villager.getNameId(), villager);
+        UUID uuid = villager.getVillager().getUniqueId();
+        String name = villager.getNameId();
+
+        if (villagers.containsKey(uuid))
+            throw new IllegalArgumentException("Villager uuid already registered!");
+
+        if (byName.containsKey(name))
+            throw new IllegalArgumentException("Villager name already registered!");
+
+        villagers.put(uuid, villager);
+        byName.put(name, villager);
     }
 
     public static MLVillager get(UUID uuid) {

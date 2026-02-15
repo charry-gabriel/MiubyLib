@@ -7,7 +7,7 @@
 
     <groupId>fr.miuby.lib</groupId>
     <artifactId>miuby-lib</artifactId>
-    <version>1.9</version>
+    <version>1.10</version>
     <packaging>jar</packaging>
 
     <build>

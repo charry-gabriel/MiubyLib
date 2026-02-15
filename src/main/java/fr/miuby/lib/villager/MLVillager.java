@@ -42,7 +42,7 @@ public abstract class MLVillager {
         return villager;
     }
 
-    public static <T extends MLVillager> T create(Supplier<T> constructor) {
+    public static <T extends MLVillager> T spawn(Supplier<T> constructor) {
         T villager = constructor.get();
         villager.init();
         return villager;
@@ -58,7 +58,7 @@ public abstract class MLVillager {
         villagerData = this.loadData();
         if (villagerData == null) {
             villagerData = createDefaultData();
-            createVillager();
+            spawnVillager();
             saveData();
             onInitialized();
         } else {
@@ -87,9 +87,9 @@ public abstract class MLVillager {
         this.inventory = this.getVillager().getInventory();
     }
 
-    private void createVillager() {
+    private void spawnVillager() {
         if (villagerData == null || villagerData.location.getWorld() == null) {
-            throw new IllegalStateException("Unable to create villager " + nameId + ": Missing Location or World in villagerData.");
+            throw new IllegalStateException("Unable to spawn villager " + nameId + ": Missing Location or World in villagerData.");
         }
 
         if (!villagerData.location.getChunk().isLoaded()) {
@@ -111,7 +111,7 @@ public abstract class MLVillager {
     private void findVillager(int attempt) {
         if (attempt >= 10) {
             MiubyLib.getLogger().warning("Unable to find villager " + nameId + " after waiting for chunk load.");
-            createVillager();
+            spawnVillager();
             saveData();
             onInitialized();
             return;

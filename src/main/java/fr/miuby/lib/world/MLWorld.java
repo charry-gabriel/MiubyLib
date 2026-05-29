@@ -21,8 +21,6 @@ public class MLWorld {
     private final WorldType type;
 
     @Setter
-    private Location spawnPoint;
-    @Setter
     private Rect limit;
     @Setter
     private boolean isLocked;

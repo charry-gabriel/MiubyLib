@@ -13,6 +13,27 @@ import javax.annotation.Nullable;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+/**
+ * <p><b>Pattern d'utilisation de MLVillager :</b></p>
+ * <p>
+ * 1. Extends MLVillager
+ * 2. Implémente loadData() pour charger depuis fichier/DB
+ * 3. Implémente saveData() pour persister
+ * 4. Implémente createDefaultData() pour création initiale
+ * 5. Override onInitialized() si besoin de logique custom
+ * </p>
+ * <p>
+ * Le système gère automatiquement :
+ * - Création du villageois Bukkit
+ * - Retry si chunk pas chargé (10 tentatives max, 10 ticks entre)
+ * - Persistence (UUID + Location)
+ * - Configuration (AI off, collidable off, persistent on)
+ * </p>
+ * <p>
+ * IMPORTANT : Toujours appeler MLVillager.spawn(Constructor::new)
+ * pour créer une instance.
+ * </p>
+ */
 @Getter
 public abstract class MLVillager {
     protected final String nameId;

@@ -1,6 +1,8 @@
 package fr.miuby.lib.villager;
 
 import fr.miuby.lib.MiubyLib;
+import fr.miuby.lib.log.ILogTag;
+import fr.miuby.lib.log.MLLogManager;
 import lombok.Getter;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Bukkit;
@@ -13,6 +15,7 @@ import org.bukkit.inventory.Inventory;
 import javax.annotation.Nullable;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 
 /**
  * <p><b>Pattern d'utilisation :</b></p>
@@ -39,6 +42,8 @@ import java.util.function.Supplier;
  */
 @Getter
 public abstract class MLVillager {
+    private static final ILogTag TAG = () -> "VILLAGER";
+
     protected final String nameId;
     private final Villager.Type type;
     private final Villager.Profession profession;
@@ -183,7 +188,7 @@ public abstract class MLVillager {
 
     private void findVillager(int attempt) {
         if (attempt >= 10) {
-            MiubyLib.getLogger().warning(
+            MLLogManager.getInstance().log(Level.WARNING, TAG,
                     "Villager " + nameId + " introuvable après 10 tentatives — respawn forcé.");
             spawnVillager();
             saveData();
@@ -205,9 +210,9 @@ public abstract class MLVillager {
         if (entity != null && entity.getType() == EntityType.VILLAGER) {
             this.villager = (Villager) entity;
             if (attempt == 0) {
-                MiubyLib.getLogger().info("Villager " + nameId + " chargé.");
+                MLLogManager.getInstance().log(Level.INFO, TAG, "Villager " + nameId + " chargé.");
             } else {
-                MiubyLib.getLogger().info(
+                MLLogManager.getInstance().log(Level.INFO, TAG,
                         "Villager " + nameId + " trouvé après " + (attempt * 10) + " ticks d'attente.");
             }
             onInitialized();

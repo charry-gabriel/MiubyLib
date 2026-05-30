@@ -5,6 +5,7 @@ import org.bukkit.event.Event;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
 import java.util.logging.Logger;
 
 public class MiubyLib {
@@ -45,11 +46,21 @@ public class MiubyLib {
     }
 
     // -------------------------------------------------------------------------
-    // Misc
+    // Plugin
     // -------------------------------------------------------------------------
 
     public static Logger getLogger() {
         return plugin.getLogger();
+    }
+
+    /** Nom du plugin tel que déclaré dans {@code plugin.yml}. */
+    public static String getPluginName() {
+        return plugin != null ? plugin.getName() : "MiubyLib";
+    }
+
+    /** Dossier de données du plugin ({@code plugins/<NomDuPlugin>/}). */
+    public static File getDataFolder() {
+        return plugin.getDataFolder();
     }
 
     public static void callEvent(Event event) {

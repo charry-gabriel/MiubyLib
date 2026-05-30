@@ -18,6 +18,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.38")
     testCompileOnly("org.projectlombok:lombok:1.18.38")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
+    compileOnly("org.apache.logging.log4j:log4j-core:2.19.0")
 }
 
 java {

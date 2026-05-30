@@ -4,6 +4,7 @@ import fr.miuby.lib.MiubyLib;
 import lombok.Getter;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Villager;
@@ -14,25 +15,27 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
- * <p><b>Pattern d'utilisation de MLVillager :</b></p>
- * <p>
- * 1. Extends MLVillager
- * 2. Implémente loadData() pour charger depuis fichier/DB
- * 3. Implémente saveData() pour persister
- * 4. Implémente createDefaultData() pour création initiale
- * 5. Override onInitialized() si besoin de logique custom
- * </p>
- * <p>
- * Le système gère automatiquement :
- * - Création du villageois Bukkit
- * - Retry si chunk pas chargé (10 tentatives max, 10 ticks entre)
- * - Persistence (UUID + Location)
- * - Configuration (AI off, collidable off, persistent on)
- * </p>
- * <p>
- * IMPORTANT : Toujours appeler MLVillager.spawn(Constructor::new)
- * pour créer une instance.
- * </p>
+ * <p><b>Pattern d'utilisation :</b></p>
+ * <ol>
+ *   <li>Étendre {@code MLVillager}</li>
+ *   <li>Implémenter {@link #loadData()} — charge depuis fichier/DB ; retourner {@code null} si premier spawn</li>
+ *   <li>Implémenter {@link #saveData()} — persiste les données</li>
+ *   <li>Implémenter {@link #createDefaultData()} — données par défaut au premier spawn</li>
+ *   <li>Surcharger {@link #onInitialized()} si besoin de logique custom après chargement</li>
+ *   <li>Surcharger {@link #onDestroy()} pour du cleanup avant suppression</li>
+ * </ol>
+ *
+ * <p>Le système gère automatiquement :</p>
+ * <ul>
+ *   <li>Création de l'entité Bukkit</li>
+ *   <li>Retry si le chunk n'est pas chargé (10 tentatives × 10 ticks)</li>
+ *   <li>Respawn automatique si introuvable après les retries</li>
+ *   <li>Persistence (UUID + Location)</li>
+ *   <li>Configuration de base (AI off, collidable off, persistent on)</li>
+ *   <li><b>Enregistrement automatique</b> dans {@link VillagerRegistry}</li>
+ * </ul>
+ *
+ * <p><b>IMPORTANT :</b> Toujours créer via {@code MLVillager.spawn(Constructor::new)}, jamais {@code new}.</p>
  */
 @Getter
 public abstract class MLVillager {
@@ -46,13 +49,37 @@ public abstract class MLVillager {
 
     private MLVillagerData villagerData;
 
+    public MLVillager(String nameId, Villager.Type type, Villager.Profession profession) {
+        this.nameId = nameId;
+        this.type = type;
+        this.profession = profession;
+    }
+
+    // -------------------------------------------------------------------------
+    // API publique
+    // -------------------------------------------------------------------------
+
+    /**
+     * Crée et initialise une instance de villager.
+     * Doit toujours être utilisé à la place de {@code new}.
+     */
+    public static <T extends MLVillager> T spawn(Supplier<T> constructor) {
+        T villager = constructor.get();
+        villager.init();
+        return villager;
+    }
+
+    /**
+     * Retourne l'entité Bukkit de manière null-safe.
+     * Effectue un relookup par UUID si la référence locale est invalide (monde rechargé, etc.).
+     */
     public Villager getVillager() {
         if (this.villager != null && this.villager.isValid() && !this.villager.isDead())
             return this.villager;
 
         UUID uuid = this.villager == null ? null : this.villager.getUniqueId();
         if (uuid == null)
-            throw new IllegalStateException("Villager " + this.nameId + " is null.");
+            throw new IllegalStateException("Villager " + this.nameId + " est null.");
 
         Entity lookup = Bukkit.getEntity(uuid);
         if (lookup instanceof Villager live) {
@@ -63,16 +90,60 @@ public abstract class MLVillager {
         return villager;
     }
 
-    public static <T extends MLVillager> T spawn(Supplier<T> constructor) {
-        T villager = constructor.get();
-        villager.init();
-        return villager;
+    /**
+     * Détruit le villager : le désenregistre de {@link VillagerRegistry},
+     * appelle {@link #onDestroy()}, puis supprime l'entité Bukkit.
+     */
+    public void destroy() {
+        VillagerRegistry.unregister(this);
+        onDestroy();
+        if (villager != null) {
+            villager.remove();
+        }
     }
 
-    public MLVillager(String nameId, Villager.Type type, Villager.Profession profession) {
-        this.nameId = nameId;
-        this.type = type;
-        this.profession = profession;
+    // -------------------------------------------------------------------------
+    // Méthodes abstraites à implémenter
+    // -------------------------------------------------------------------------
+
+    /** Charge les données persistées. Retourner {@code null} s'il s'agit du premier spawn. */
+    protected abstract @Nullable MLVillagerData loadData();
+
+    /** Persiste les données du villager (appelé après le premier spawn). */
+    protected abstract void saveData();
+
+    /** Retourne les données par défaut pour le premier spawn. */
+    protected abstract MLVillagerData createDefaultData();
+
+    // -------------------------------------------------------------------------
+    // Hooks overridables
+    // -------------------------------------------------------------------------
+
+    /**
+     * Appelé une fois le villager prêt (entité Bukkit chargée).
+     * La version de base applique le displayName, crée l'inventaire, enregistre dans
+     * {@link VillagerRegistry} et fire {@link VillagerLoadedEvent}.
+     * Toujours appeler {@code super.onInitialized()} en premier.
+     */
+    protected void onInitialized() {
+        getVillager().customName(getDisplayName());
+        createInventory();
+        VillagerRegistry.register(this);
+        MiubyLib.callEvent(new VillagerLoadedEvent(this));
+    }
+
+    /**
+     * Appelé lors de {@link #destroy()}, avant la suppression de l'entité Bukkit.
+     * Override pour libérer des ressources custom (inventaires, tasks, etc.).
+     */
+    protected void onDestroy() {}
+
+    // -------------------------------------------------------------------------
+    // Internals
+    // -------------------------------------------------------------------------
+
+    protected void createInventory() {
+        this.inventory = this.getVillager().getInventory();
     }
 
     public final void init() {
@@ -87,37 +158,18 @@ public abstract class MLVillager {
         }
     }
 
-    protected void destroy() {
-        if (villager != null) {
-            villager.remove();
-        }
-    }
-
-    protected abstract @Nullable MLVillagerData loadData();
-    protected abstract void saveData();
-    protected abstract MLVillagerData createDefaultData();
-
-    protected void onInitialized() {
-        getVillager().customName(getDisplayName());
-        createInventory();
-
-        MiubyLib.callEvent(new VillagerLoadedEvent(this));
-    }
-
-    protected void createInventory() {
-        this.inventory = this.getVillager().getInventory();
-    }
-
     private void spawnVillager() {
-        if (villagerData == null || villagerData.location.getWorld() == null) {
-            throw new IllegalStateException("Unable to spawn villager " + nameId + ": Missing Location or World in villagerData.");
+        if (villagerData == null || villagerData.getLocation().getWorld() == null) {
+            throw new IllegalStateException(
+                    "Impossible de spawner le villager " + nameId + " : Location ou World manquant dans villagerData.");
         }
 
-        if (!villagerData.location.getChunk().isLoaded()) {
-            villagerData.location.getChunk().load();
+        if (!villagerData.getLocation().getChunk().isLoaded()) {
+            villagerData.getLocation().getChunk().load();
         }
 
-        this.villager = (Villager) villagerData.location.getWorld().spawnEntity(villagerData.location, EntityType.VILLAGER);
+        this.villager = (Villager) villagerData.getLocation().getWorld()
+                .spawnEntity(villagerData.getLocation(), EntityType.VILLAGER);
         villager.setVillagerType(type);
         villager.setProfession(profession);
         villager.setAI(false);
@@ -126,26 +178,38 @@ public abstract class MLVillager {
         villager.setPersistent(true);
         villager.setRemoveWhenFarAway(false);
 
-        this.villagerData.uuid = this.villager.getUniqueId();
+        villagerData.setUuid(this.villager.getUniqueId());
     }
 
     private void findVillager(int attempt) {
         if (attempt >= 10) {
-            MiubyLib.getLogger().warning("Unable to find villager " + nameId + " after waiting for chunk load.");
+            MiubyLib.getLogger().warning(
+                    "Villager " + nameId + " introuvable après 10 tentatives — respawn forcé.");
             spawnVillager();
             saveData();
             onInitialized();
             return;
         }
 
-        if (!villagerData.location.getChunk().isLoaded()) {
-            villagerData.location.getChunk().load();
+        World world = villagerData.getLocation().getWorld();
+        if (world == null) {
+            MiubyLib.runLater(() -> findVillager(attempt + 1), 10L);
+            return;
         }
 
-        Entity entity = villagerData.location.getWorld().getEntity(villagerData.uuid);
+        if (!villagerData.getLocation().getChunk().isLoaded()) {
+            villagerData.getLocation().getChunk().load();
+        }
+
+        Entity entity = world.getEntity(villagerData.getUuid());
         if (entity != null && entity.getType() == EntityType.VILLAGER) {
-            this.villager = (Villager)entity;
-            MiubyLib.getLogger().info("Villager " + nameId + " found after waiting " + attempt + " ticks.");
+            this.villager = (Villager) entity;
+            if (attempt == 0) {
+                MiubyLib.getLogger().info("Villager " + nameId + " chargé.");
+            } else {
+                MiubyLib.getLogger().info(
+                        "Villager " + nameId + " trouvé après " + (attempt * 10) + " ticks d'attente.");
+            }
             onInitialized();
         } else {
             MiubyLib.runLater(() -> findVillager(attempt + 1), 10L);

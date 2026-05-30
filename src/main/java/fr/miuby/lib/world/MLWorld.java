@@ -5,9 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -33,11 +31,12 @@ public class MLWorld {
         return player.getWorld().getUID().equals(getUUID());
     }
 
+    /**
+     * {@code true} si le joueur est dans ce monde et hors de la {@link Rect limite}.
+     * Retourne {@code false} si aucune limite n'est définie ou si le joueur n'est pas dans ce monde.
+     */
     public boolean isPlayerOutOfLimit(Player player) {
-        if (limit == null || !isPlayerInWorld(player)) {
-            return false;
-        }
-        Block block = player.getLocation().getBlock();
-        return limit.isOut(block.getX(), block.getY(), block.getZ());
+        if (limit == null || !isPlayerInWorld(player)) return false;
+        return limit.isOut(player.getLocation());
     }
 }

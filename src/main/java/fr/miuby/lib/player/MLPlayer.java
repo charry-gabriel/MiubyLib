@@ -9,17 +9,18 @@ import java.util.UUID;
 public class MLPlayer {
     @Getter
     protected final UUID uuid;
-    @Setter
-    @Getter
+    @Setter @Getter
     protected String pseudo;
-    @Setter
-    @Getter
+    @Setter @Getter
     protected Player player;
 
     public MLPlayer(UUID uuid) {
         this.uuid = uuid;
     }
 
-    public void onJoinServer() {
-    }
+    /** Appelé lorsque le joueur se connecte au serveur. */
+    public void onJoinServer() {}
+
+    /** Appelé lorsque le joueur se déconnecte du serveur. */
+    public void onQuitServer() {}
 }

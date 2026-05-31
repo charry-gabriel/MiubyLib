@@ -46,7 +46,7 @@ import java.util.logging.Level;
  *
  *     @Override
  *     protected void onLoaded() {
- *         myRepo = new MyRepository(getConnection());
+ *         myRepo = new MyRepository(getConnection(), this);
  *     }
  *
  *     public MyRepository myRepo() { return myRepo; }
@@ -202,6 +202,57 @@ public abstract class MLSQLite {
         } catch (SQLException e) {
             MLLogManager.getInstance().log(Level.SEVERE, TAG, "Impossible d'obtenir une connexion SQLite.", e);
             return null;
+        }
+    }
+
+    // =========================================================================
+    // Debug SQL brut
+    // =========================================================================
+
+    /**
+     * Exécute une requête SQL brute et retourne le résultat formaté en String.
+     * Réservé au debug et aux commandes admin — ne pas utiliser dans du code métier.
+     *
+     * <p>Si la requête commence par {@code SELECT}, retourne les lignes séparées par {@code \n}.
+     * Sinon (INSERT/UPDATE/DELETE/PRAGMA…), retourne {@code "Query executed !"}.</p>
+     */
+    public String executeRaw(String sql) {
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = getConnection();
+            ps = conn.prepareStatement(sql);
+
+            if (sql.trim().split("\\s+")[0].equalsIgnoreCase("select")) {
+                ResultSet rs = ps.executeQuery();
+                int column = rs.getMetaData().getColumnCount();
+                StringBuilder result = new StringBuilder();
+                while (rs.next()) {
+                    for (int i = 1; i <= column; i++) {
+                        result.append(rs.getString(i));
+                        if (i != column) result.append(", ");
+                    }
+                    result.append("\n");
+                }
+                return result.toString();
+            } else {
+                ps.executeUpdate();
+                return "Query executed !";
+            }
+        } catch (SQLException ex) {
+            MLLogManager.getInstance().log(Level.SEVERE, TAG, "Failed to execute raw SQL: " + sql, ex);
+            return "Error: " + ex.getMessage();
+        } finally {
+            closeResources(conn, ps);
+        }
+    }
+
+    private static void closeResources(Connection conn, PreparedStatement ps) {
+        try {
+            if (ps != null) ps.close();
+            if (conn != null) conn.close();
+        } catch (SQLException ex) {
+            MLLogManager.getInstance().log(Level.SEVERE, TAG, "Failed to close database resources", ex);
         }
     }
 

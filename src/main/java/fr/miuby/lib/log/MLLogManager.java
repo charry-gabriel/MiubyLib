@@ -132,10 +132,8 @@ public class MLLogManager {
         isInitialized = true;
 
         logInternal(Level.INFO, "SYSTEM", "MLLogManager initialisé");
-        logInternal(Level.INFO, "SYSTEM",
-                "  ├─ Tags activés : " + countEnabled(enabledTags) + "/" + enabledTags.size());
-        logInternal(Level.INFO, "SYSTEM",
-                "  └─ Levels activés : " + countEnabled(enabledLevels) + "/" + enabledLevels.size());
+        logInternal(Level.INFO, "SYSTEM", "  ├─ Tags activés : " + countEnabled(enabledTags) + "/" + enabledTags.size());
+        logInternal(Level.INFO, "SYSTEM", "  └─ Levels activés : " + countEnabled(enabledLevels) + "/" + enabledLevels.size());
     }
 
     // =========================================================================
@@ -155,18 +153,14 @@ public class MLLogManager {
             String prefix = MiubyLib.getPluginName().toLowerCase().replace(" ", "-");
 
             // DEBUG : tout, stacktraces, longue rétention (10 fichiers × 10 MB)
-            addFileHandler(logDir, prefix + "-debug-%g.log",
-                    10 * 1024 * 1024, 10,
-                    logRecord -> true);
+            addFileHandler(logDir, prefix + "-debug-%g.log", 10 * 1024 * 1024, 10, logRecord -> true);
 
             // INFO : INFO+ (5 fichiers × 5 MB)
-            addFileHandler(logDir, prefix + "-info-%g.log",
-                    5 * 1024 * 1024, 5,
+            addFileHandler(logDir, prefix + "-info-%g.log", 5 * 1024 * 1024, 5,
                     logRecord -> logRecord.getLevel().intValue() >= Level.INFO.intValue());
 
             // WARN : WARNING+ archive légère (5 fichiers × 2 MB)
-            addFileHandler(logDir, prefix + "-warn-%g.log",
-                    2 * 1024 * 1024, 5,
+            addFileHandler(logDir, prefix + "-warn-%g.log", 2 * 1024 * 1024, 5,
                     logRecord -> logRecord.getLevel().intValue() >= Level.WARNING.intValue());
 
             // Débranche la console Bukkit par défaut
@@ -185,13 +179,8 @@ public class MLLogManager {
         }
     }
 
-    private void addFileHandler(File logDir, String pattern, int maxBytes, int maxFiles, Filter filter)
-            throws IOException {
-        FileHandler handler = new FileHandler(
-                new File(logDir, pattern).getPath(),
-                maxBytes, maxFiles,
-                true // append au redémarrage
-        );
+    private void addFileHandler(File logDir, String pattern, int maxBytes, int maxFiles, Filter filter) throws IOException {
+        FileHandler handler = new FileHandler(new File(logDir, pattern).getPath(), maxBytes, maxFiles, true);
         handler.setFormatter(new SimpleFormatter());
         handler.setLevel(Level.ALL);
         handler.setFilter(filter);
@@ -262,7 +251,7 @@ public class MLLogManager {
     }
 
     // =========================================================================
-    // GESTION DES TAGS
+    // GESTION DES TAGS — overloads ILogTag
     // =========================================================================
 
     public void toggleTag(ILogTag tag) {
@@ -278,6 +267,31 @@ public class MLLogManager {
 
     public boolean isTagEnabled(ILogTag tag) {
         return enabledTags.getOrDefault(tag.name(), true);
+    }
+
+    // =========================================================================
+    // GESTION DES TAGS — overloads String (utilisés par MLLogCommand)
+    // =========================================================================
+
+    /**
+     * Overload String de {@link #toggleTag(ILogTag)}.
+     * Utilisé par {@code MLLogCommand} pour éviter le couplage aux enums de tags des plugins.
+     */
+    public void toggleTag(String tagName) {
+        boolean newState = !enabledTags.getOrDefault(tagName, true);
+        enabledTags.put(tagName, newState);
+        if (persistence != null) persistence.saveTagState(tagName, newState);
+    }
+
+    /** Overload String de {@link #setTagEnabled(ILogTag, boolean)}. */
+    public void setTagEnabled(String tagName, boolean enabled) {
+        enabledTags.put(tagName, enabled);
+        if (persistence != null) persistence.saveTagState(tagName, enabled);
+    }
+
+    /** Overload String de {@link #isTagEnabled(ILogTag)}. */
+    public boolean isTagEnabled(String tagName) {
+        return enabledTags.getOrDefault(tagName, true);
     }
 
     public void enableAllTags() {

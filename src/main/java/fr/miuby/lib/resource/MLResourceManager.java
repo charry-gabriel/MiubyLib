@@ -23,7 +23,7 @@ import java.util.logging.Level;
 /**
  * Utilitaire MiubyLib pour la gestion des ressources YAML d'un plugin.
  *
- * <h3>Déploiement (JAR → disque)</h3>
+ * <p><b>Déploiement (JAR → disque)</b></p>
  * <ul>
  *   <li>{@link #deploy(JavaPlugin, String)} — copie/met à jour un fichier unique.</li>
  *   <li>{@link #deployFolder(JavaPlugin, String)} — copie/met à jour tous les {@code .yml}
@@ -31,13 +31,13 @@ import java.util.logging.Level;
  * </ul>
  * Peut être appelé <em>avant</em> {@code MiubyLib.init()} — seul un {@link JavaPlugin} est requis.
  *
- * <h3>Chargement POJO (SnakeYAML, avec cache)</h3>
+ * <p><b>Chargement POJO (SnakeYAML, avec cache)</b></p>
  * <ul>
  *   <li>{@link #loadPojo(JavaPlugin, String, String, Class)} — charge par ID, résultat mis en cache.</li>
  *   <li>{@link #loadPojoAll(JavaPlugin, String, Class)} — charge tout un dossier, résultats mis en cache.</li>
  * </ul>
  *
- * <h3>Usage typique dans un plugin</h3>
+ * <p><b>Usage typique dans un plugin</b></p>
  * <pre>{@code
  * // Dans onEnable(), avant MiubyLib.init() :
  * MLResourceManager.deploy(this, "config.yml");
@@ -237,6 +237,9 @@ public final class MLResourceManager {
     /**
      * Localise le fichier JAR du plugin via son ClassLoader (CodeSource).
      * Retourne {@code null} si la résolution échoue (contexte de test sans JAR, etc.).
+     *
+     * @param plugin instance du plugin dont on cherche le JAR
+     * @return le fichier JAR, ou {@code null} si introuvable
      */
     private static File resolveJar(JavaPlugin plugin) {
         try {

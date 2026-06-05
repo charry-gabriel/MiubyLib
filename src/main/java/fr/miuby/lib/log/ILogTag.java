@@ -16,6 +16,8 @@ public interface ILogTag {
     /**
      * Identifiant de la catégorie, tel qu'il apparaît dans la map interne du {@link MLLogManager}.
      * Pour un {@code Enum}, retourne le nom de la constante en majuscules (ex : {@code "PLAYER"}).
+     *
+     * @return le nom du tag en majuscules
      */
     String name();
 }

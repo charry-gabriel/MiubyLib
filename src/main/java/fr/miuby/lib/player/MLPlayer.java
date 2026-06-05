@@ -6,6 +6,11 @@ import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
+/**
+ * Représentation d'un joueur Bukkit dans le système MiubyLib.
+ *
+ * <p>Étendre cette classe dans le plugin pour y ajouter les données propres au joueur.</p>
+ */
 public class MLPlayer {
     @Getter
     protected final UUID uuid;

@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  * {@link StringArgumentType#word()}, et {@code listSuggestions} filtre automatiquement
  * par préfixe la collection renvoyée par {@link #suggestions()}.</p>
  *
- * <h3>Usage minimal</h3>
+ * <p><b>Usage minimal</b></p>
  * <pre>{@code
  * public class RoleArgument extends MLStringArgument<Role> {
  *
@@ -44,9 +44,9 @@ import java.util.concurrent.CompletableFuture;
  * }
  * }</pre>
  *
- * <h3>Auto-complétion contextuelle</h3>
- * Si les suggestions dépendent du contexte de la commande (joueur, autres arguments…),
- * surchargez directement {@link #listSuggestions} plutôt que {@link #suggestions} :
+ * <p><b>Auto-complétion contextuelle</b></p>
+ * <p>Si les suggestions dépendent du contexte de la commande (joueur, autres arguments…),
+ * surchargez directement {@link #listSuggestions} plutôt que {@link #suggestions} :</p>
  * <pre>{@code
  * @Override
  * public <S> @NonNull CompletableFuture<Suggestions> listSuggestions(
@@ -59,7 +59,7 @@ import java.util.concurrent.CompletableFuture;
  * }
  * }</pre>
  *
- * @param <T> le type retourné par {@link #convert(String)}
+ * @param <T> le type retourné par convert
  */
 public abstract class MLStringArgument<T> implements CustomArgumentType.Converted<T, String> {
 
@@ -69,12 +69,18 @@ public abstract class MLStringArgument<T> implements CustomArgumentType.Converte
      * <p>Appelé à chaque frappe ; peut accéder à l'état courant du jeu.
      * L'implémentation par défaut retourne une collection vide — à surcharger,
      * ou surcharger directement {@link #listSuggestions} pour une logique contextuelle.</p>
+     *
+     * @return collection de suggestions, vide par défaut
      */
     protected Collection<String> suggestions() {
         return Collections.emptyList();
     }
 
-    /** Toujours {@link StringArgumentType#word()} pour ce type d'argument. */
+    /**
+     * Toujours {@link StringArgumentType#word()} pour ce type d'argument.
+     *
+     * @return le type natif Brigadier ({@link StringArgumentType#word()})
+     */
     @Override
     public final @NonNull ArgumentType<String> getNativeType() {
         return StringArgumentType.word();
@@ -83,6 +89,11 @@ public abstract class MLStringArgument<T> implements CustomArgumentType.Converte
     /**
      * Filtre {@link #suggestions()} par le préfixe déjà tapé (insensible à la casse).
      * Surchargez cette méthode si la liste de suggestions dépend du contexte.
+     *
+     * @param <S>     type de la source de commande
+     * @param context contexte Brigadier courant
+     * @param builder constructeur de suggestions Brigadier
+     * @return {@link CompletableFuture} des suggestions filtrées
      */
     @Override
     public <S> @NonNull CompletableFuture<Suggestions> listSuggestions(

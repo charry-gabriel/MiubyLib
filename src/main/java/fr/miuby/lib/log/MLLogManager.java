@@ -17,7 +17,7 @@ import java.util.logging.*;
  *
  * <p>Un message est émis si son tag ET son level sont tous les deux activés.</p>
  *
- * <h3>Sorties fichiers</h3>
+ * <p><b>Sorties fichiers</b></p>
  * <ul>
  *   <li>{@code <plugin>-debug-%g.log} — tout (ALL), stacktraces incluses, 10 × 10 MB</li>
  *   <li>{@code <plugin>-info-%g.log}  — INFO+, 5 × 5 MB</li>
@@ -25,7 +25,7 @@ import java.util.logging.*;
  *   <li>Console                       — WARNING+ seulement</li>
  * </ul>
  *
- * <h3>Usage minimal</h3>
+ * <p><b>Usage minimal</b></p>
  * <pre>{@code
  * // 1. Déclarer les tags (enum implements ILogTag)
  * public enum ETagLog implements ILogTag { PLAYER, WORLD, SYSTEM }
@@ -45,6 +45,11 @@ import java.util.logging.*;
 public class MLLogManager {
     private static MLLogManager instance = null;
 
+    /**
+     * Retourne l'instance unique du gestionnaire de logs.
+     *
+     * @return l'instance singleton de {@code MLLogManager}
+     */
     public static MLLogManager getInstance() {
         if (instance == null) instance = new MLLogManager();
         return instance;
@@ -82,6 +87,7 @@ public class MLLogManager {
      * Enregistre les tags d'un enum implémentant {@link ILogTag}.
      * Peut être appelé avant ou après {@link #initialize()}.
      *
+     * @param <T>  type de l'enum implémentant {@link ILogTag}
      * @param tags tableau {@code MyEnum.values()}
      */
     public <T extends Enum<T> & ILogTag> void registerTags(T[] tags) {
@@ -94,6 +100,8 @@ public class MLLogManager {
      * Ajoute un filtre de bruit externe par sous-chaîne.
      * Les messages contenant cette sous-chaîne seront redirigés vers debug
      * et masqués de la console.
+     *
+     * @param substring sous-chaîne à filtrer
      */
     public void addNoiseFilter(String substring) {
         noiseFilters.add(substring);
@@ -223,12 +231,23 @@ public class MLLogManager {
      *
      * <p>Les tags non enregistrés via {@link #registerTags} sont traités comme activés
      * par défaut, ce qui permet de logger avant l'enregistrement complet des tags.</p>
+     *
+     * @param level   niveau JUL du message
+     * @param tag     catégorie du message
+     * @param message texte à logger
      */
     public void log(Level level, ILogTag tag, String message) {
         logInternal(level, tag.name(), message);
     }
 
-    /** Variante avec exception — la stacktrace complète apparaît dans {@code -debug.log}. */
+    /**
+     * Variante avec exception — la stacktrace complète apparaît dans {@code -debug.log}.
+     *
+     * @param level     niveau JUL du message
+     * @param tag       catégorie du message
+     * @param message   texte à logger
+     * @param throwable exception dont la stacktrace sera enregistrée
+     */
     public void log(Level level, ILogTag tag, String message, Throwable throwable) {
         if (Boolean.FALSE.equals(enabledTags.getOrDefault(tag.name(), true))) return;
         if (Boolean.FALSE.equals(enabledLevels.getOrDefault(level, true))) return;
@@ -254,17 +273,34 @@ public class MLLogManager {
     // GESTION DES TAGS — overloads ILogTag
     // =========================================================================
 
+    /**
+     * Inverse l'état d'activation du tag.
+     *
+     * @param tag le tag à basculer
+     */
     public void toggleTag(ILogTag tag) {
         boolean newState = !enabledTags.getOrDefault(tag.name(), true);
         enabledTags.put(tag.name(), newState);
         if (persistence != null) persistence.saveTagState(tag.name(), newState);
     }
 
+    /**
+     * Définit l'état d'activation du tag.
+     *
+     * @param tag     le tag à modifier
+     * @param enabled {@code true} pour activer, {@code false} pour désactiver
+     */
     public void setTagEnabled(ILogTag tag, boolean enabled) {
         enabledTags.put(tag.name(), enabled);
         if (persistence != null) persistence.saveTagState(tag.name(), enabled);
     }
 
+    /**
+     * Indique si le tag est actuellement activé.
+     *
+     * @param tag le tag à vérifier
+     * @return {@code true} si le tag est activé
+     */
     public boolean isTagEnabled(ILogTag tag) {
         return enabledTags.getOrDefault(tag.name(), true);
     }
@@ -276,6 +312,8 @@ public class MLLogManager {
     /**
      * Overload String de {@link #toggleTag(ILogTag)}.
      * Utilisé par {@code MLLogCommand} pour éviter le couplage aux enums de tags des plugins.
+     *
+     * @param tagName nom du tag à basculer
      */
     public void toggleTag(String tagName) {
         boolean newState = !enabledTags.getOrDefault(tagName, true);
@@ -283,17 +321,31 @@ public class MLLogManager {
         if (persistence != null) persistence.saveTagState(tagName, newState);
     }
 
-    /** Overload String de {@link #setTagEnabled(ILogTag, boolean)}. */
+    /**
+     * Overload String de {@link #setTagEnabled(ILogTag, boolean)}.
+     *
+     * @param tagName nom du tag à modifier
+     * @param enabled {@code true} pour activer, {@code false} pour désactiver
+     */
     public void setTagEnabled(String tagName, boolean enabled) {
         enabledTags.put(tagName, enabled);
         if (persistence != null) persistence.saveTagState(tagName, enabled);
     }
 
-    /** Overload String de {@link #isTagEnabled(ILogTag)}. */
+    /**
+     * Overload String de {@link #isTagEnabled(ILogTag)}.
+     *
+     * @param tagName nom du tag à vérifier
+     * @return {@code true} si le tag est activé
+     */
     public boolean isTagEnabled(String tagName) {
         return enabledTags.getOrDefault(tagName, true);
     }
 
+    /**
+     * Active tous les tags enregistrés et persiste les changements
+     * si un {@link MLLogPersistence} est configuré.
+     */
     public void enableAllTags() {
         enabledTags.replaceAll((tag, ignored) -> {
             if (persistence != null) persistence.saveTagState(tag, true);
@@ -301,6 +353,10 @@ public class MLLogManager {
         });
     }
 
+    /**
+     * Désactive tous les tags enregistrés et persiste les changements
+     * si un {@link MLLogPersistence} est configuré.
+     */
     public void disableAllTags() {
         enabledTags.replaceAll((tag, ignored) -> {
             if (persistence != null) persistence.saveTagState(tag, false);
@@ -308,7 +364,11 @@ public class MLLogManager {
         });
     }
 
-    /** Retourne une copie de la map {@code tagName → enabled}. */
+    /**
+     * Retourne une copie de la map {@code tagName → enabled}.
+     *
+     * @return copie de la map d'état des tags
+     */
     public Map<String, Boolean> getAllTagStates() {
         return new HashMap<>(enabledTags);
     }
@@ -317,29 +377,53 @@ public class MLLogManager {
     // GESTION DES LEVELS
     // =========================================================================
 
+    /**
+     * Inverse l'état d'activation du level.
+     *
+     * @param level le level JUL à basculer
+     */
     public void toggleLevel(Level level) {
         boolean newState = !enabledLevels.getOrDefault(level, true);
         enabledLevels.put(level, newState);
         if (persistence != null) persistence.saveLevelState(level.getName(), newState);
     }
 
+    /**
+     * Définit l'état d'activation du level.
+     *
+     * @param level   le level JUL à modifier
+     * @param enabled {@code true} pour activer, {@code false} pour désactiver
+     */
     public void setLevelEnabled(Level level, boolean enabled) {
         enabledLevels.put(level, enabled);
         if (persistence != null) persistence.saveLevelState(level.getName(), enabled);
     }
 
+    /**
+     * Indique si le level est actuellement activé.
+     *
+     * @param level le level JUL à vérifier
+     * @return {@code true} si le level est activé
+     */
     public boolean isLevelEnabled(Level level) {
         return enabledLevels.getOrDefault(level, true);
     }
 
+    /** Active tous les levels enregistrés. */
     public void enableAllLevels() {
         for (Level level : enabledLevels.keySet()) setLevelEnabled(level, true);
     }
 
+    /** Désactive tous les levels enregistrés. */
     public void disableAllLevels() {
         for (Level level : enabledLevels.keySet()) setLevelEnabled(level, false);
     }
 
+    /**
+     * Retourne une copie de la map {@code Level → enabled}.
+     *
+     * @return copie de la map d'état des levels
+     */
     public Map<Level, Boolean> getAllLevelStates() {
         return new HashMap<>(enabledLevels);
     }

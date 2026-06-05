@@ -16,7 +16,7 @@ import java.util.logging.Level;
  * <p>Gère l'ouverture du fichier {@code .db}, le versionnage du schéma via
  * {@code PRAGMA user_version}, et l'orchestration des migrations.</p>
  *
- * <h3>Pattern d'implémentation minimal</h3>
+ * <p><b>Pattern d'implémentation minimal</b></p>
  * <pre>{@code
  * public class MyDatabase extends MLSQLite {
  *     private static final int TARGET_VERSION = 2;
@@ -53,7 +53,7 @@ import java.util.logging.Level;
  * }
  * }</pre>
  *
- * <h3>Pattern avancé (chaîne d'héritage)</h3>
+ * <p><b>Pattern avancé (chaîne d'héritage)</b></p>
  * <p>Il est possible de glisser une classe abstraite intermédiaire entre {@code MLSQLite} et
  * l'implémentation concrète. C'est le pattern utilisé dans Survi :</p>
  * <pre>
@@ -135,12 +135,16 @@ public abstract class MLSQLite {
     /**
      * Version cible du schéma — incrémenter à chaque migration ajoutée.
      * Utilisée pour comparer avec {@code PRAGMA user_version} lu en base.
+     *
+     * @return version cible du schéma
      */
     protected abstract int getTargetVersion();
 
     /**
      * Crée les tables manquantes via {@code CREATE TABLE IF NOT EXISTS}.
      * Appelé avant la vérification de version — idempotent par nature.
+     *
+     * @throws SQLException si la création d'une table échoue
      */
     protected abstract void createTables() throws SQLException;
 
@@ -162,6 +166,9 @@ public abstract class MLSQLite {
      *
      * <p>{@link #setVersion(int)} est appelé automatiquement par {@link #load()} après
      * cette méthode — ne pas l'appeler depuis l'implémentation.</p>
+     *
+     * @param currentVersion version actuelle lue depuis {@code PRAGMA user_version}
+     * @throws SQLException si une migration échoue
      */
     protected abstract void runMigrations(int currentVersion) throws SQLException;
 
@@ -215,6 +222,9 @@ public abstract class MLSQLite {
      *
      * <p>Si la requête commence par {@code SELECT}, retourne les lignes séparées par {@code \n}.
      * Sinon (INSERT/UPDATE/DELETE/PRAGMA…), retourne {@code "Query executed !"}.</p>
+     *
+     * @param sql requête SQL à exécuter
+     * @return résultat formaté de la requête, ou un message d'erreur en cas d'échec
      */
     public String executeRaw(String sql) {
         Connection conn = null;
@@ -263,6 +273,8 @@ public abstract class MLSQLite {
     /**
      * Lit la version actuelle du schéma via {@code PRAGMA user_version}.
      * Retourne {@code 0} si la lecture échoue (base vierge ou corrompue).
+     *
+     * @return version actuelle du schéma, ou {@code 0} en cas d'erreur
      */
     protected int getCurrentVersion() {
         try (Statement s = connection.createStatement();
@@ -278,6 +290,9 @@ public abstract class MLSQLite {
      * Écrit la version du schéma via {@code PRAGMA user_version = N}.
      * Appelé automatiquement par {@link #load()} après {@link #runMigrations(int)}.
      * Ne pas appeler manuellement.
+     *
+     * @param version nouvelle version du schéma à persister
+     * @throws SQLException si l'écriture échoue
      */
     protected void setVersion(int version) throws SQLException {
         try (Statement s = connection.createStatement()) {
@@ -294,6 +309,11 @@ public abstract class MLSQLite {
      *     s.executeUpdate("ALTER TABLE player ADD COLUMN score INT NOT NULL DEFAULT 0");
      * }
      * }</pre>
+     *
+     * @param table  nom de la table à inspecter
+     * @param column nom de la colonne à chercher
+     * @return {@code true} si la colonne existe
+     * @throws SQLException si la lecture du schéma échoue
      */
     protected boolean hasColumn(String table, String column) throws SQLException {
         try (Statement s = connection.createStatement();

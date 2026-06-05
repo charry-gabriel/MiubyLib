@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
+/**
+ * Données persistées d'un {@link MLVillager} (UUID, identifiant et position).
+ */
 @Getter
 @AllArgsConstructor
 public class MLVillagerData {

@@ -17,7 +17,7 @@ import java.util.logging.Level;
  * <p>Tout plugin MiubyLib peut l'insérer dans son arbre de commandes pour obtenir gratuitement
  * la gestion des tags, niveaux et modes de log, sans dépendance à ses propres enums de tags.</p>
  *
- * <h3>Intégration</h3>
+ * <p><b>Intégration</b></p>
  * <pre>{@code
  * // Dans XxxCommand.createCommand() :
  * return Commands.literal("monplugin")
@@ -26,7 +26,7 @@ import java.util.logging.Level;
  *         .then(Commands.literal("autre")...);
  * }</pre>
  *
- * <h3>Sous-commandes exposées</h3>
+ * <p><b>Sous-commandes exposées</b></p>
  * <ul>
  *   <li>{@code log status} — affiche l'état de tous les tags et levels</li>
  *   <li>{@code log tag toggle|enable|disable <TAG>} — bascule un tag</li>
@@ -42,6 +42,8 @@ public final class MLLogCommand {
 
     /**
      * Retourne le sous-arbre Brigadier {@code log} prêt à être passé à un {@code .then()}.
+     *
+     * @return le builder Brigadier de la sous-commande {@code log}
      */
     public static LiteralArgumentBuilder<CommandSourceStack> create() {
         return Commands.literal("log")

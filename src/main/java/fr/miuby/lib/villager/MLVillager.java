@@ -67,6 +67,10 @@ public abstract class MLVillager {
     /**
      * Crée et initialise une instance de villager.
      * Doit toujours être utilisé à la place de {@code new}.
+     *
+     * @param <T>         type concret du villager
+     * @param constructor fournisseur qui instancie le villager
+     * @return l'instance initialisée et prête à l'emploi
      */
     public static <T extends MLVillager> T spawn(Supplier<T> constructor) {
         T villager = constructor.get();
@@ -77,6 +81,9 @@ public abstract class MLVillager {
     /**
      * Retourne l'entité Bukkit de manière null-safe.
      * Effectue un relookup par UUID si la référence locale est invalide (monde rechargé, etc.).
+     *
+     * @return l'entité Bukkit {@link Villager}, jamais {@code null}
+     * @throws IllegalStateException si l'UUID du villager est introuvable
      */
     public Villager getVillager() {
         if (this.villager != null && this.villager.isValid() && !this.villager.isDead())
@@ -111,13 +118,23 @@ public abstract class MLVillager {
     // Méthodes abstraites à implémenter
     // -------------------------------------------------------------------------
 
-    /** Charge les données persistées. Retourner {@code null} s'il s'agit du premier spawn. */
+    /**
+     * Charge les données persistées. Retourner {@code null} s'il s'agit du premier spawn.
+     *
+     * @return les données chargées, ou {@code null} au premier spawn
+     */
     protected abstract @Nullable MLVillagerData loadData();
 
-    /** Persiste les données du villager (appelé après le premier spawn). */
+    /**
+     * Persiste les données du villager (appelé après le premier spawn).
+     */
     protected abstract void saveData();
 
-    /** Retourne les données par défaut pour le premier spawn. */
+    /**
+     * Retourne les données par défaut pour le premier spawn.
+     *
+     * @return les données initiales du villager
+     */
     protected abstract MLVillagerData createDefaultData();
 
     // -------------------------------------------------------------------------

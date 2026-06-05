@@ -10,6 +10,12 @@ import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
+/**
+ * Représentation d'un monde géré par MiubyLib.
+ *
+ * <p>Encapsule un {@link World} Bukkit avec ses métadonnées (nom, couleur, type)
+ * et une limite de zone optionnelle ({@link Rect}).</p>
+ */
 @Getter
 @RequiredArgsConstructor
 public class MLWorld {
@@ -23,17 +29,31 @@ public class MLWorld {
     @Setter
     private boolean isLocked;
 
+    /**
+     * Retourne l'UUID unique du monde Bukkit.
+     *
+     * @return l'UUID du monde
+     */
     public UUID getUUID() {
         return world.getUID();
     }
 
+    /**
+     * Indique si le joueur se trouve dans ce monde.
+     *
+     * @param player le joueur à vérifier
+     * @return {@code true} si le joueur est dans ce monde
+     */
     public boolean isPlayerInWorld(Player player) {
         return player.getWorld().getUID().equals(getUUID());
     }
 
     /**
-     * {@code true} si le joueur est dans ce monde et hors de la {@link Rect limite}.
+     * Indique si le joueur est dans ce monde et hors de la {@link Rect limite}.
      * Retourne {@code false} si aucune limite n'est définie ou si le joueur n'est pas dans ce monde.
+     *
+     * @param player le joueur à vérifier
+     * @return {@code true} si le joueur est hors de la limite définie
      */
     public boolean isPlayerOutOfLimit(Player player) {
         if (limit == null || !isPlayerInWorld(player)) return false;

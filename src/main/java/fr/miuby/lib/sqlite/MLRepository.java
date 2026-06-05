@@ -18,7 +18,7 @@ import java.util.logging.Level;
  *   <li>{@link #runAsync(SQLTask, ILogTag, String)} — variante avec tag et message d'erreur personnalisés.</li>
  * </ul>
  *
- * <h3>Pattern d'implémentation</h3>
+ * <p><b>Pattern d'implémentation</b></p>
  * <pre>{@code
  * public class MyRepository extends MLRepository {
  *
@@ -66,6 +66,8 @@ public abstract class MLRepository {
     /**
      * Exécute {@code task} dans un thread async avec une connexion fraîche auto-fermée.
      * Les erreurs SQL sont loggées avec le tag générique REPOSITORY.
+     *
+     * @param task la tâche SQL à exécuter
      */
     protected void runAsync(SQLTask task) {
         MiubyLib.runAsync(() -> {
@@ -80,6 +82,7 @@ public abstract class MLRepository {
     /**
      * Variante de {@link #runAsync(SQLTask)} avec tag et message d'erreur propres au plugin.
      *
+     * @param task     la tâche SQL à exécuter
      * @param tag      tag de log du plugin appelant (e.g. {@code ELogTag.PLAYER})
      * @param errorMsg message d'erreur affiché si la tâche échoue
      */
@@ -99,6 +102,12 @@ public abstract class MLRepository {
      */
     @FunctionalInterface
     public interface SQLTask {
+        /**
+         * Exécute des opérations SQL sur la connexion fournie.
+         *
+         * @param conn connexion fraîche — utiliser try-with-resources pour les {@code PreparedStatement}
+         * @throws SQLException si une erreur SQL survient
+         */
         void execute(Connection conn) throws SQLException;
     }
 }

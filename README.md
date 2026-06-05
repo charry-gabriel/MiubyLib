@@ -1,102 +1,117 @@
 # MiubyLib
 
-Bibliothèque personnelle pour faciliter le développement de plugins Minecraft.
+A personal utility library for Minecraft plugin development — built to avoid rewriting the same boilerplate across every project.
 
-## C'est quoi ?
+[![](https://jitpack.io/v/charry-gabriel/MiubyLib.svg)](https://jitpack.io/#charry-gabriel/MiubyLib)
 
-MiubyLib est une petite lib que j'ai créée pour éviter de réécrire toujours le même code dans mes plugins. Elle fournit des systèmes prêts à l'emploi pour gérer des villageois personnalisés et des mondes avec limites.
+---
 
-## Comment l'utiliser
+## Installation
 
-### Initialisation
+Add JitPack to your `settings.gradle`:
 
-Dans ton plugin principal, appelle `MiubyLib.init(this)` dans `onEnable()` :
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+Then add the dependency:
+
+```kotlin
+dependencies {
+    implementation("com.github.charry-gabriel:MiubyLib:<version>")
+}
+```
+
+---
+
+## Getting Started
+
+Call `MiubyLib.init(this)` in your plugin's `onEnable()` before using anything else:
 
 ```java
-public class MonPlugin extends JavaPlugin {
+public class MyPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         MiubyLib.init(this);
-        // reste du code...
     }
 }
 ```
 
-## Modules disponibles
+---
 
-### 1. Système de Villageois Personnalisés (MLVillager)
+## Modules
 
-Permet de créer des villageois custom qui persistent et se rechargent automatiquement.
+### MLVillager — Custom Persistent Villagers
 
-**Fonctionnalités :**
-- Sauvegarde/chargement automatique
-- Persistance (le villageois reste même après redémarrage)
-- Recherche automatique si le chunk n'est pas chargé (avec retry)
-- AI désactivée, collision désactivée
+An abstract class for creating custom villagers that automatically save, load, and respawn across server restarts.
 
-**Comment créer un villageois custom :**
+**Features:**
+- Automatic save/load lifecycle
+- Chunk-aware retry system (10 attempts, 10 ticks apart) before respawning
+- AI, collision and sounds disabled by default
+- Event fired when the villager is ready: `VillagerLoadedEvent`
+
+**Usage:**
 
 ```java
-public class MonVillager extends MLVillager {
-    public MonVillager() {
-        super("mon_id_unique", Villager.Type.PLAINS, Villager.Profession.FARMER);
+public class MyVillager extends MLVillager {
+    public MyVillager() {
+        super("my_unique_id", Villager.Type.PLAINS, Villager.Profession.FARMER);
     }
-    
+
     @Override
     protected MLVillagerData loadData() {
-        // Charge depuis fichier/DB
+        // Load from file/database
         return data;
     }
-    
+
     @Override
     protected void saveData() {
-        // Sauvegarde dans fichier/DB
+        // Save to file/database
     }
-    
+
     @Override
     protected MLVillagerData createDefaultData() {
-        // Retourne les données par défaut (location, etc.)
-        return new MLVillagerData(location, null);
+        return new MLVillagerData(spawnLocation, null);
     }
-    
+
     @Override
     protected void onInitialized() {
         super.onInitialized();
-        // Appelé quand le villageois est prêt
+        // Called when the villager is fully loaded and ready
     }
 }
 
-// Pour créer :
-MonVillager villager = MLVillager.create(MonVillager::new);
+// Registering
+MyVillager villager = MLVillager.create(MyVillager::new);
 VillagerRegistry.register(villager);
 ```
 
-**VillagerRegistry :**
-- `register(villager)` - Enregistre un villageois
-- `get(UUID)` - Récupère par UUID
-- `get(String)` - Récupère par nom
-- `getAll()` - Récupère tous les villageois
+**VillagerRegistry:**
 
-**Event :**
-- `VillagerLoadedEvent` - Déclenché quand un villageois est chargé/initialisé
+| Method | Description |
+|---|---|
+| `register(villager)` | Register a villager |
+| `get(UUID)` | Get by UUID |
+| `get(String)` | Get by name/id |
+| `getAll()` | Get all registered villagers |
 
-### 2. Système de Mondes (MLWorld)
+---
 
-Wrapper autour de World avec des fonctionnalités supplémentaires.
+### MLWorld — World Wrapper
 
-**Fonctionnalités :**
-- Nom custom et couleur
-- Point de spawn personnalisé
-- Limites de monde (Rect)
-- Lock/unlock du monde
-- Type de monde (WorldType enum)
+A wrapper around Bukkit's `World` with extra features like custom names, colors, spawn points, and region limits.
 
-**Comment l'utiliser :**
+**Usage:**
 
 ```java
 MLWorld world = new MLWorld(
     bukkitWorld,
-    "Nom Custom",
+    "Custom Name",
     NamedTextColor.RED,
     WorldType.OVERWORLD
 );
@@ -105,71 +120,72 @@ world.setSpawnPoint(location);
 world.setLimit(new Rect(100, -100, 255, 0, 100, -100)); // xMax, xMin, yMax, yMin, zMax, zMin
 world.setLocked(true);
 
-// Vérifications
-if (world.isPlayerInWorld(player)) { ... }
-if (world.isPlayerOutOfLimit(player)) { ... }
+// Checks
+world.isPlayerInWorld(player);
+world.isPlayerOutOfLimit(player); // returns false if no limit is set
 
-// Enregistrer
+// Register
 WorldRegistry.register(world);
 ```
 
-**WorldRegistry :**
-- `register(world)` - Enregistre un monde
-- `get(UUID)` - Récupère par UUID
-- `get(String)` - Récupère par nom
-- `getAll()` - Récupère tous les mondes
+**WorldRegistry:**
 
-### 3. Utilitaires (utils)
+| Method | Description |
+|---|---|
+| `register(world)` | Register a world |
+| `get(UUID)` | Get by UUID |
+| `get(String)` | Get by name |
+| `getAll()` | Get all registered worlds |
 
-**Rect :**
-Record pour définir une zone 3D rectangulaire.
-- `isOut(x, y, z)` - Vérifie si un point est hors limites
+---
 
-**MiubyLib (classe principale) :**
-- `init(plugin)` - À appeler dans onEnable()
-- `runLater(Runnable, delay)` - Planifie une tâche
-- `getLogger()` - Récupère le logger du plugin
-- `callEvent(Event)` - Appelle un event custom
+### Rect — 3D Region
 
-## Structure du projet
+A simple record defining a rectangular 3D zone.
+
+```java
+// 200x200 square centered on 0,0
+new Rect(100, -100, 255, 0, 100, -100); // xMax, xMin, yMax, yMin, zMax, zMin
+
+rect.isOut(x, y, z); // true if the point is outside the bounds
+```
+
+---
+
+### MiubyLib — Main Class
+
+| Method | Description |
+|---|---|
+| `init(plugin)` | Initialize the library |
+| `runLater(Runnable, delay)` | Schedule a delayed task |
+| `getLogger()` | Get the plugin logger |
+| `callEvent(Event)` | Fire a custom event |
+
+---
+
+## Dependencies
+
+- Bukkit / Spigot API
+- [Lombok](https://projectlombok.org/)
+- [Kyori Adventure](https://docs.advntr.net/)
+
+---
+
+## Project Structure
 
 ```
 MiubyLib/
 └── src/main/java/fr/miuby/lib/
-    ├── MiubyLib.java              # Classe principale
+    ├── MiubyLib.java
     ├── utils/
-    │   └── Rect.java              # Zone 3D rectangulaire
+    │   └── Rect.java
     ├── villager/
-    │   ├── MLVillager.java        # Classe abstraite pour villageois custom
-    │   ├── MLVillagerData.java    # Données de sauvegarde
+    │   ├── MLVillager.java
+    │   ├── MLVillagerData.java
     │   ├── VillagerLoadedEvent.java
-    │   └── VillagerRegistry.java  # Registre global
+    │   └── VillagerRegistry.java
     └── world/
-        ├── MLWorld.java           # Wrapper de World
-        ├── WorldRegistry.java     # Registre global
-        └── WorldType.java         # Enum des types
+        ├── MLWorld.java
+        ├── WorldRegistry.java
+        └── WorldType.java
 ```
-
-## Dépendances
-
-- Bukkit/Spigot API
-- Lombok (pour @Getter, @Setter, etc.)
-- Kyori Adventure (pour les TextComponents)
-
-## Notes importantes
-
-### MLVillager
-- Le système de retry attend 10 ticks entre chaque tentative
-- Maximum 10 tentatives avant de recréer le villageois
-- Toujours sauvegarder après création/modification
-- Les villageois sont automatiquement configurés : AI off, collidable off, silent, persistent
-
-### MLWorld
-- Les limites (Rect) sont optionnelles
-- Le lock ne fait rien automatiquement, c'est à toi de le gérer
-- La vérification `isPlayerOutOfLimit()` retourne false si pas de limite définie
-
-### Rect
-- Les coordonnées sont inclusives
-- Format: `(xMax, xMin, yMax, yMin, zMax, zMin)`
-- Exemple pour un carré de 200x200 centré sur 0,0 : `new Rect(100, -100, 255, 0, 100, -100)`

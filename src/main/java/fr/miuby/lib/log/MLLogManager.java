@@ -62,6 +62,13 @@ public class MLLogManager {
     private final Map<String, Boolean>  enabledTags   = new HashMap<>();
     private final Map<Level, Boolean>   enabledLevels = new LinkedHashMap<>();
     private final List<String>          noiseFilters  = new ArrayList<>();
+
+    /**
+     * Cache des noms de tags formatés ({@code "ALPHA_PLAYER"} → {@code "AlphaPlayer"}).
+     * Peuplé lors de {@link #registerTags} pour éviter la conversion Guava à chaque appel de log.
+     */
+    private final Map<String, String> formattedTagCache = new HashMap<>();
+
     private boolean isInitialized = false;
     private MLLogPersistence persistence = null;
 
@@ -86,6 +93,7 @@ public class MLLogManager {
     /**
      * Enregistre les tags d'un enum implémentant {@link ILogTag}.
      * Peut être appelé avant ou après {@link #initialize()}.
+     * Pré-calcule les noms formatés pour éviter la conversion Guava sur chaque appel de log.
      *
      * @param <T>  type de l'enum implémentant {@link ILogTag}
      * @param tags tableau {@code MyEnum.values()}
@@ -93,6 +101,7 @@ public class MLLogManager {
     public <T extends Enum<T> & ILogTag> void registerTags(T[] tags) {
         for (T tag : tags) {
             enabledTags.putIfAbsent(tag.name(), true);
+            formattedTagCache.putIfAbsent(tag.name(), CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, tag.name()));
         }
     }
 
@@ -249,24 +258,28 @@ public class MLLogManager {
      * @param throwable exception dont la stacktrace sera enregistrée
      */
     public void log(Level level, ILogTag tag, String message, Throwable throwable) {
-        if (Boolean.FALSE.equals(enabledTags.getOrDefault(tag.name(), true))) return;
-        if (Boolean.FALSE.equals(enabledLevels.getOrDefault(level, true))) return;
-
-        String formatted = formatTag(tag.name());
-        logger.log(level, "[" + formatted + "] " + message, throwable);
+        if (!enabledTags.getOrDefault(tag.name(), true)) return;
+        if (!enabledLevels.getOrDefault(level, true)) return;
+        logger.log(level, "[" + formatTag(tag.name()) + "] " + message, throwable);
     }
 
-    /** Usage interne — contourne l'interface {@link ILogTag} pour les messages système. */
+    /**
+     * Usage interne — contourne l'interface {@link ILogTag} pour les messages système.
+     * Construit la chaîne de log une seule fois, partagée entre tous les handlers.
+     */
     private void logInternal(Level level, String tagName, String message) {
-        if (Boolean.FALSE.equals(enabledTags.getOrDefault(tagName, true))) return;
-        if (Boolean.FALSE.equals(enabledLevels.getOrDefault(level, true))) return;
-
-        logger.log(level, "[{0}] {1}", new Object[]{formatTag(tagName), message});
+        if (!enabledTags.getOrDefault(tagName, true)) return;
+        if (!enabledLevels.getOrDefault(level, true)) return;
+        logger.log(level, "[" + formatTag(tagName) + "] " + message);
     }
 
-    /** {@code "ALPHA_PLAYER"} → {@code "AlphaPlayer"} */
-    private static String formatTag(String tagName) {
-        return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, tagName);
+    /**
+     * Retourne le nom formaté du tag depuis le cache.
+     * Calcul Guava effectué au plus une fois par tag (à l'enregistrement ou au premier accès).
+     * {@code "ALPHA_PLAYER"} → {@code "AlphaPlayer"}
+     */
+    private String formatTag(String tagName) {
+        return formattedTagCache.computeIfAbsent(tagName, n -> CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, n));
     }
 
     // =========================================================================
@@ -480,7 +493,9 @@ public class MLLogManager {
     // UTILITAIRES
     // =========================================================================
 
-    private <T> long countEnabled(Map<T, Boolean> map) {
-        return map.values().stream().filter(b -> b).count();
+    private <T> int countEnabled(Map<T, Boolean> map) {
+        int count = 0;
+        for (boolean b : map.values()) { if (b) count++; }
+        return count;
     }
 }

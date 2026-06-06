@@ -7,10 +7,24 @@ import java.util.*;
  *
  * <p>Utile pour indexer un objet selon plusieurs identifiants (UUID, nom, type, etc.).</p>
  *
+ * <p><b>Perf :</b> {@link #getAll()} et {@link #size()} sont O(1) sans allocation grâce à
+ * un {@code HashSet} secondaire mis à jour à chaque écriture. La vue retournée par {@link #getAll()}
+ * est non-modifiable ; les appelants ne doivent pas tenter de la modifier.</p>
+ *
+ * <p><b>Contrainte :</b> ré-enregistrer une clé déjà connue vers une <em>valeur différente</em>
+ * sans passer d'abord par {@link #unregister(Object)} peut laisser l'ancienne valeur orpheline
+ * dans {@code distinctValues}. Ce cas ne se produit pas dans les usages du projet.</p>
+ *
  * @param <V> type des valeurs stockées
  */
 public class MultiKeyRegistry<V> {
     private final Map<Object, V> storage = new HashMap<>();
+
+    /**
+     * Ensemble dédupliqué des valeurs distinctes enregistrées.
+     * Mis à jour en O(1) à chaque écriture pour éviter l'allocation dans {@link #getAll()}.
+     */
+    private final Set<V> distinctValues = new HashSet<>();
 
     /**
      * Enregistre {@code value} sous toutes les clés fournies.
@@ -19,6 +33,7 @@ public class MultiKeyRegistry<V> {
      * @param keys  une ou plusieurs clés d'accès
      */
     public void register(V value, Object... keys) {
+        distinctValues.add(value);
         for (Object key : keys) {
             storage.put(key, value);
         }
@@ -35,12 +50,13 @@ public class MultiKeyRegistry<V> {
     }
 
     /**
-     * Retourne une vue dédupliquée de toutes les valeurs.
+     * Retourne une vue non-modifiable et dédupliquée de toutes les valeurs.
+     * Appel O(1) — aucune allocation.
      *
-     * @return ensemble dédupliqué de toutes les valeurs
+     * @return vue non-modifiable de toutes les valeurs distinctes
      */
     public Collection<V> getAll() {
-        return new HashSet<>(storage.values());
+        return Collections.unmodifiableCollection(distinctValues);
     }
 
     /**
@@ -55,12 +71,17 @@ public class MultiKeyRegistry<V> {
 
     /**
      * Retire l'entrée associée à cette clé spécifique.
+     * Si la valeur n'a plus aucune clé après ce retrait, elle est aussi retirée des valeurs distinctes.
      *
      * @param key la clé à retirer
      * @return la valeur précédemment associée, ou {@code null}
      */
     public V remove(Object key) {
-        return storage.remove(key);
+        V value = storage.remove(key);
+        if (value != null && !storage.containsValue(value)) {
+            distinctValues.remove(value);
+        }
+        return value;
     }
 
     /**
@@ -70,19 +91,22 @@ public class MultiKeyRegistry<V> {
      */
     public void unregister(V value) {
         storage.entrySet().removeIf(e -> e.getValue() == value);
+        distinctValues.remove(value);
     }
 
     /**
      * Retourne le nombre de valeurs distinctes enregistrées.
+     * Appel O(1) — aucune allocation.
      *
      * @return nombre de valeurs distinctes
      */
     public int size() {
-        return new HashSet<>(storage.values()).size();
+        return distinctValues.size();
     }
 
     /** Vide toutes les entrées du registry. */
     public void clear() {
         storage.clear();
+        distinctValues.clear();
     }
 }

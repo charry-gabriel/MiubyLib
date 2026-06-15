@@ -1,6 +1,6 @@
 package fr.miuby.lib.log;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Interface de persistence des états de log (tags et levels).

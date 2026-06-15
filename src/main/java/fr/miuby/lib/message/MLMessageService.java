@@ -30,26 +30,26 @@ import java.util.logging.Level;
  * chaîne du type {@code "categorie.sous_categorie.nom"} ; toute clé utilisée dans le code
  * doit exister dans le fichier de la locale par défaut (et idéalement dans les autres).</p>
  *
- * <h3>Clé manquante — pas de crash</h3>
+ * <p><b>Clé manquante — pas de crash</b></p>
  * <p>Si une clé est absente de la locale demandée ET de la locale par défaut, l'appelant
  * reçoit un message d'avertissement bien visible (template overridable, contient le nom
  * exact de la clé) et un warning est loggé une seule fois par clé (tag {@code MESSAGE}).</p>
  *
- * <h3>Format des templates (MiniMessage)</h3>
+ * <p><b>Format des templates (MiniMessage)</b></p>
  * <ul>
  *   <li>{@code {0}}, {@code {1}}… — remplacements de chaînes simples (échappés pour MiniMessage)</li>
  *   <li>{@code <name>} — {@link TagResolver} Adventure (ex. composant coloré du nom d'un métier)</li>
  * </ul>
  *
- * <h3>Mode mono-langue</h3>
+ * <p><b>Mode mono-langue</b></p>
  * <p>Si {@code locales} ne contient qu'un seul code, {@link #resolveLanguage(Player)} retourne
  * toujours ce code (sans lire {@code player.locale()}, {@code forceDefault} est ignoré) et
  * {@link #broadcast} devient un simple envoi à tous les joueurs en ligne dans cette langue.</p>
  *
- * <h3>Fallback</h3>
+ * <p><b>Fallback</b></p>
  * <p>locale demandée → locale par défaut ({@code locales.get(0)}) → message "clé manquante".</p>
  *
- * <h3>API</h3>
+ * <p><b>API</b></p>
  * <pre>{@code
  * MLMessageService msg = new MLMessageService(plugin, "lang", List.of("fr", "en"), false);
  *
@@ -182,7 +182,7 @@ public class MLMessageService {
      * Détermine la locale à utiliser pour ce joueur.
      * <ul>
      *   <li>Mode mono-langue ({@code locales.size() == 1}) → retourne toujours cette locale.</li>
-     *   <li>{@code forceDefault: true} → retourne toujours {@link #getDefaultLocale()}.</li>
+     *   <li>{@code forceDefault: true} → retourne toujours {@link #defaultLocale}.</li>
      *   <li>Sinon → {@code player.locale().getLanguage()}, repli sur la locale par défaut
      *       si la langue du client n'est pas supportée.</li>
      * </ul>

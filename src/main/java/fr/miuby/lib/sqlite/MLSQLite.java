@@ -69,6 +69,9 @@ import java.util.logging.Level;
 public abstract class MLSQLite {
     private static final ILogTag TAG = () -> "SQLITE";
 
+    /** Délai (ms) pendant lequel SQLite réessaie une écriture avant de lever SQLITE_BUSY. */
+    private static final int BUSY_TIMEOUT_MS = 5000;
+
     private Connection connection;
     private final String dbName;
 
@@ -109,6 +112,17 @@ public abstract class MLSQLite {
         } catch (SQLException e) {
             MLLogManager.getInstance().log(Level.SEVERE, TAG, "Impossible d'ouvrir la connexion SQLite : " + dbName, e);
             return;
+        }
+
+        // WAL (persisté dans le fichier, une seule fois suffit) + busy_timeout (par connexion, voir getConnection())
+        // pour que les écritures async concurrentes (plusieurs joueurs / plusieurs repositories) attendent
+        // leur tour au lieu de se faire jeter en SQLITE_BUSY et perdre silencieusement la donnée.
+        try (Statement s = connection.createStatement()) {
+            s.execute("PRAGMA journal_mode=WAL");
+            s.execute("PRAGMA busy_timeout=" + BUSY_TIMEOUT_MS);
+        } catch (SQLException e) {
+            MLLogManager.getInstance().log(Level.WARNING, TAG,
+                    "Impossible d'activer WAL/busy_timeout sur " + dbName + " — écritures concurrentes non protégées.", e);
         }
 
         try {
@@ -205,7 +219,11 @@ public abstract class MLSQLite {
                 return connection;
             }
             File dbFile = new File(MiubyLib.getDataFolder(), dbName + ".db");
-            return DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+            Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+            try (Statement s = conn.createStatement()) {
+                s.execute("PRAGMA busy_timeout=" + BUSY_TIMEOUT_MS);
+            }
+            return conn;
         } catch (SQLException e) {
             MLLogManager.getInstance().log(Level.SEVERE, TAG, "Impossible d'obtenir une connexion SQLite.", e);
             return null;

@@ -7,6 +7,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.*;
 import java.util.logging.Level;
 
@@ -214,19 +216,82 @@ public abstract class MLSQLite {
      */
     @Nullable
     public Connection getConnection() {
+        boolean onServerThread = Thread.currentThread().getName().equals("Server thread");
         try {
-            if (connection != null && !connection.isClosed() && Thread.currentThread().getName().equals("Server thread")) {
+            if (onServerThread && connection != null && !connection.isClosed()) {
                 return connection;
             }
-            File dbFile = new File(MiubyLib.getDataFolder(), dbName + ".db");
-            Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
-            try (Statement s = conn.createStatement()) {
-                s.execute("PRAGMA busy_timeout=" + BUSY_TIMEOUT_MS);
+
+            Connection fresh = openFreshConnection();
+
+            if (onServerThread) {
+                // La connexion persistante était absente, fermée, ou invalide (verrou bloqué,
+                // erreur disque…) : on la remplace et on recache la nouvelle. Sans ce recache,
+                // chaque appelant qui stocke le résultat de getConnection() une seule fois (cas de
+                // Database.onLoaded()) resterait bloqué indéfiniment sur une connexion morte après
+                // le premier incident, jusqu'au redémarrage du serveur.
+                if (connection != null) {
+                    closeQuietly(connection);
+                    MLLogManager.getInstance().log(Level.WARNING, TAG,
+                            "Connexion SQLite " + dbName + " invalide ou fermée — reconnexion automatique effectuée.");
+                }
+                connection = fresh;
             }
-            return conn;
+
+            return fresh;
         } catch (SQLException e) {
             MLLogManager.getInstance().log(Level.SEVERE, TAG, "Impossible d'obtenir une connexion SQLite.", e);
             return null;
+        }
+    }
+
+    /**
+     * Retourne une {@link Connection} "résiliente" : un proxy qui délègue chaque appel à
+     * {@link #getConnection()} au moment de l'appel, au lieu de figer une référence une bonne fois
+     * pour toutes.
+     *
+     * <p><b>À utiliser systématiquement pour toute connexion destinée à être conservée durablement</b>
+     * (typiquement un champ de repository créé dans {@link #onLoaded()}). Si la connexion sous-jacente
+     * venait à être fermée ou invalide, {@link #getConnection()} la rouvre silencieusement à l'appel
+     * suivant — le proxy continue donc de fonctionner sans jamais rester bloqué sur une connexion
+     * morte jusqu'au redémarrage du serveur.</p>
+     *
+     * <p>Ne change rien à l'utilisation côté repository : le proxy implémente {@link Connection},
+     * {@code connection.prepareStatement(...)} fonctionne exactement comme avant.</p>
+     *
+     * @return un proxy {@link Connection} auto-réparant
+     */
+    public Connection getResilientConnection() {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    Connection live = getConnection();
+                    if (live == null) {
+                        throw new SQLException("Connexion SQLite indisponible : " + dbName);
+                    }
+                    try {
+                        return method.invoke(live, args);
+                    } catch (InvocationTargetException ex) {
+                        throw ex.getCause();
+                    }
+                }
+        );
+    }
+
+    private Connection openFreshConnection() throws SQLException {
+        File dbFile = new File(MiubyLib.getDataFolder(), dbName + ".db");
+        Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        try (Statement s = conn.createStatement()) {
+            s.execute("PRAGMA busy_timeout=" + BUSY_TIMEOUT_MS);
+        }
+        return conn;
+    }
+
+    private static void closeQuietly(Connection c) {
+        try {
+            c.close();
+        } catch (SQLException ignored) {
         }
     }
 

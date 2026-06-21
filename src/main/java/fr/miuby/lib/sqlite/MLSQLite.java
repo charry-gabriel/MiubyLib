@@ -247,8 +247,10 @@ public abstract class MLSQLite {
     public String executeRaw(String sql) {
         Connection conn = null;
         PreparedStatement ps = null;
+        boolean ownsConnection = false;
         try {
             conn = getConnection();
+            ownsConnection = (conn != connection);
             ps = conn.prepareStatement(sql);
 
             if (sql.trim().split("\\s+")[0].equalsIgnoreCase("select")) {
@@ -271,14 +273,14 @@ public abstract class MLSQLite {
             MLLogManager.getInstance().log(Level.SEVERE, TAG, "Failed to execute raw SQL: " + sql, ex);
             return "Error: " + ex.getMessage();
         } finally {
-            closeResources(conn, ps);
+            closeResources(conn, ps, ownsConnection);
         }
     }
 
-    private static void closeResources(Connection conn, PreparedStatement ps) {
+    private static void closeResources(Connection conn, PreparedStatement ps, boolean closeConnection) {
         try {
             if (ps != null) ps.close();
-            if (conn != null) conn.close();
+            if (conn != null && closeConnection) conn.close();
         } catch (SQLException ex) {
             MLLogManager.getInstance().log(Level.SEVERE, TAG, "Failed to close database resources", ex);
         }
